@@ -113,4 +113,5 @@ end
 
 % Compute the BER. 
 BER = nr_errors / nr_data_bits / nr_blocks;
+BerT = 0.5 * erfc( sqrt(10 .^ (Eb_No / 10)) );
 
