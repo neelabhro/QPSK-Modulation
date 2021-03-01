@@ -14,4 +14,20 @@ function phihat = phase_estimation(r, b_train)
 % Output:
 %   phihat     = estimated phase
 
-
+phihat = 0;
+qpsk_b = qpsk(b_train);
+r_bits = r(1:length(qpsk_b));% Considering thge bits of the training sequence
+e = norm(r_bits-qpsk_b);
+%for loop in order to estimate the phase that minimizes the distance
+%beetween the QPSK Mapped training sequence and the first bits received in
+%the synchronized signal
+%Minimizing the distance between the QPSK training sequence and the initial
+%bits of the sync signal
+for i = -3.1416:0.01:3.1416
+    rprime = r_bits*exp(-1i*i);
+    eprime = norm(rprime - qpsk_b);
+    if(eprime < e)
+        e = eprime;
+        phihat = i;
+    end
+end
