@@ -53,8 +53,7 @@ for n = 1:length(b)/2
     end
 end
 
-figure;
-plot(d,'x');
-xlabel('Real'); ylabel('Imaginary');
-title('QPSK constellation');
-
+%figure;
+%plot(d,'x');
+%xlabel('Real'); ylabel('Imaginary');
+%title('QPSK constellation');
