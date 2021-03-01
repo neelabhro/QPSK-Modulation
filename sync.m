@@ -20,4 +20,15 @@ function t_samp = sync(mf, b_train, Q, t_start, t_end)
 %   t_samp = sampling instant for first symbol
 
 
+qpsk_b = qpsk(b_train);
+t_total = t_end-t_start;
+c = zeros(1,t_total); %Initializng the correlation values
+n = length(qpsk_b);
 
+
+for i = 1:t_total
+    c(i)=sum(conj(mf(t_start+(i-1):Q:t_start+(i-1)+Q*n-1)).*qpsk_b,2); %Correlating the shifted matched filter sequence with the training sequence
+end
+
+[~, tsamp] = max(abs(c));
+t_samp = t_start + tsamp -1;
