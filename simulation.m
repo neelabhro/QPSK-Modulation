@@ -4,7 +4,9 @@
 %   2000-06-28  written /Stefan Parkvall
 %   2001-10-22  modified /George Jongren
 
-clear
+clear;
+clc;
+close all;
 
 % Initialization
 EbN0_db = 0:10;                     % Eb/N0 values to simulate (in dB)
@@ -113,5 +115,4 @@ end
 
 % Compute the BER. 
 BER = nr_errors / nr_data_bits / nr_blocks;
-BerT = 0.5 * erfc( sqrt(10 .^ (Eb_No / 10)) );
 
