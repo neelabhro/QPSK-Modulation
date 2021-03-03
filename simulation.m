@@ -116,3 +116,15 @@ end
 % Compute the BER. 
 BER = nr_errors / nr_data_bits / nr_blocks;
 
+%% Plots
+
+% Periodogram
+Prr = periodogram(r);
+figure(1)
+plot(Prr)
+title('Periodogram')
+
+% BER 
+figure(2)
+plot(EbN0_db, BER)
+title('BER')
