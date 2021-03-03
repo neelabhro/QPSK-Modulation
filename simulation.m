@@ -9,7 +9,7 @@ clc;
 close all;
 
 % Initialization
-EbN0_db = 10:15;                     % Eb/N0 values to simulate (in dB)
+EbN0_db = 0:10;                     % Eb/N0 values to simulate (in dB)
 nr_bits_per_symbol = 2;             % Corresponds to k in the report
 nr_guard_bits = 10;                 % Size of guard sequence (in nr bits)
                                     % Guard bits are appended to transmitted bits so
@@ -72,7 +72,7 @@ for snr_point = 1:length(EbN0_db)
 
     % Received signal.
     rx = tx + n;
-
+    
     %%%
     %%% Receiver
     %%%
@@ -88,14 +88,22 @@ for snr_point = 1:length(EbN0_db)
     t_end=t_start+50;
     t_samp = sync(mf, b_train, Q, t_start, t_end);
     
+    %%% PA1 Perfect t_samp:
+%     t_samp = 48;            % 10 / 2 * 8 = 40 guard bits, 40-48 is first 
+                            % training bit
+    
+    
     % Down sampling. t_samp is the first sample, the remaining samples are all
     % separated by a factor of Q. Only training+data samples are kept.
-    r = mf(t_samp:Q:t_samp+Q*(nr_training_bits+nr_data_bits)/2-1);
+    r_pre = mf(t_samp:Q:t_samp+Q*(nr_training_bits+nr_data_bits)/2-1);
 
     % Phase estimation and correction.
-    phihat = phase_estimation(r, b_train);
-    r = r * exp(-j*phihat);
-        
+    phihat = phase_estimation(r_pre, b_train);
+    r = r_pre * exp(-j*phihat);
+    
+    %%% PA1 Perfect phase: calculate phase from noise?
+    
+    
     % Make decisions. Note that dhat will include training sequence bits
     % as well.
     bhat = detect(r);
@@ -109,57 +117,110 @@ for snr_point = 1:length(EbN0_db)
 
     % Next block.
   end
-    
+  
+  %%% PA3: Plot signal constellation
+%   two_scatter(r,r_pre, snr_point)
+  
   % Next Eb/No value.
 end
 
 % Compute the BER. 
 BER = nr_errors / nr_data_bits / nr_blocks;
 
-%% Plots
-
-% Periodogram
-Prr = periodogram(r);
-figure(1)
-plot(Prr)
-title('Periodogram')
-
 %% PA 1: BER
-% BER 
+%%% BER 
 figure(2)
 plot(EbN0_db, BER)
-title('BER')
 hold on
 
-% Perfect BER: 
-
-% Assume perfect
-% EbN0 = 10.^(EbN0_db)/20;          % not sure if dB input
-BER_0 = qfunc(sqrt(2*EbN0_db));     % BER rate of QPSK, M page 128
+%%% Perfect BER: 
+EbN0 = 10.^(EbN0_db/20);        % db conversion
+BER_0 = qfunc(sqrt(2*EbN0));    % BER rate of QPSK, M page 128
 plot(EbN0_db, BER_0)
-
-
-% Exact Error probability of QPSK: why?
-P = 2*qfunc(sqrt(2*EbN0_db))-(qfunc(sqrt(EbN0_db))).^2;     % M page 118
-plot(EbN0_db, P)
-
-legend('Simulation', 'Theoretical value')
 hold off
 
+title('BER')
+legend('Simulation', 'Theoretical value')
+xlabel('SNR (dB)')
+ylabel('BER (Pr)')
+%%% Exact Error probability of QPSK: why?
+
+% P = 2*qfunc(sqrt(2*EbN0_db))-(qfunc(sqrt(EbN0_db))).^2;     % M page 118
+% plot(EbN0_db, P)
+% 
+% hold off
+
+% figsaver(1:2,'PA1')
 
 %% PA 2: Phase and timing sensitivity to noise
 
-% Measure phase est error / timing est error
+%%% Measure phase est error / timing est error
     % What is correct phase est? 
-figure(3)
-scatter(real(tx), imag(tx))
+    
+peek = 4;
+constallation_scatter(tx(peek),3)
 hold on
-scatter(real(rx), imag(rx))
+constallation_scatter(rx(peek),3)
 hold off
-    % What is correct timing?
+    
+%%% What is correct timing?
+    % 48 samples in
     
 % Plot for different SNR (start with very large)
 % Why?
 % Improved?
 
+%% PA 3: Signal constellations and noise
 
+
+%% PA 4: PSD with different pulses
+
+%%% Periodogram
+% 
+% function pa4(r)
+%     Prr = periodogram(r);
+%     figure(1)
+%     plot(Prr)
+%     title('Periodogram')
+% end
+
+
+%% Save figures
+
+% enter figure numbers and folder to where to save them
+% figsaver(1:3, 'testfig')
+
+%% Functions
+
+function one_scatter(data, fig)
+% one_scatter(data,figure)
+% 
+% Plots real and imaginary part of data using scatter plot with figure 
+% number according to input.
+%
+% Input: 
+%  data         = the data you want to plot
+%  fig       = the number of the figure plotted
+%
+% Output: 
+%   None
+
+    figure(fig)
+    scatter(real(data), imag(data))
+    
+    title('Constallation plot')
+
+end
+
+
+function two_scatter(tx, rx, snr_point)
+    fignum = snr_point + 5;
+    figure(fignum)
+    scatter(real(tx), imag(tx))
+    hold on
+    scatter(real(rx), imag(rx))
+    hold off
+    title('Recieved signal constallation with SNR = ',  snr_point)
+%     axis([-3 3 -3 3]);
+
+end
