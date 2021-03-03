@@ -9,7 +9,7 @@ clc;
 close all;
 
 % Initialization
-EbN0_db = 0:10;                     % Eb/N0 values to simulate (in dB)
+EbN0_db = 10:15;                     % Eb/N0 values to simulate (in dB)
 nr_bits_per_symbol = 2;             % Corresponds to k in the report
 nr_guard_bits = 10;                 % Size of guard sequence (in nr bits)
                                     % Guard bits are appended to transmitted bits so
@@ -109,7 +109,7 @@ for snr_point = 1:length(EbN0_db)
 
     % Next block.
   end
-
+    
   % Next Eb/No value.
 end
 
@@ -124,7 +124,42 @@ figure(1)
 plot(Prr)
 title('Periodogram')
 
+%% PA 1: BER
 % BER 
 figure(2)
 plot(EbN0_db, BER)
 title('BER')
+hold on
+
+% Perfect BER: 
+
+% Assume perfect
+% EbN0 = 10.^(EbN0_db)/20;          % not sure if dB input
+BER_0 = qfunc(sqrt(2*EbN0_db));     % BER rate of QPSK, M page 128
+plot(EbN0_db, BER_0)
+
+
+% Exact Error probability of QPSK: why?
+P = 2*qfunc(sqrt(2*EbN0_db))-(qfunc(sqrt(EbN0_db))).^2;     % M page 118
+plot(EbN0_db, P)
+
+legend('Simulation', 'Theoretical value')
+hold off
+
+
+%% PA 2: Phase and timing sensitivity to noise
+
+% Measure phase est error / timing est error
+    % What is correct phase est? 
+figure(3)
+scatter(real(tx), imag(tx))
+hold on
+scatter(real(rx), imag(rx))
+hold off
+    % What is correct timing?
+    
+% Plot for different SNR (start with very large)
+% Why?
+% Improved?
+
+
