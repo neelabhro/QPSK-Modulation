@@ -9,7 +9,11 @@ clc;
 close all;
 
 % Initialization
-EbN0_db = -5:20;                     % Eb/N0 values to simulate (in dB)
+
+%%% Variable
+EbN0_db = -50:10;                     % Eb/N0 values to simulate (in dB)
+
+%%% Static
 nr_bits_per_symbol = 2;             % Corresponds to k in the report
 nr_guard_bits = 10;                 % Size of guard sequence (in nr bits)
                                     % Guard bits are appended to transmitted bits so
@@ -24,8 +28,11 @@ Q = 8;                              % Number of samples per symbol in baseband
 % Define the pulse-shape used in the transmitter. 
 % Pick one of the pulse shapes below or experiemnt
 % with a pulse of your own.
+
+%%% Variable
 pulse_shape = ones(1, Q);
 %pulse_shape = root_raised_cosine(Q);
+
 
 % Matched filter impulse response. 
 mf_pulse_shape = fliplr(pulse_shape);
@@ -33,7 +40,17 @@ mf_pulse_shape = fliplr(pulse_shape);
 
 % Loop over different values of Eb/No.
 nr_errors = zeros(1, length(EbN0_db));   % Error counter
+
+%%% ADDITIONS: list of t_samp to measure accuracy of sync
+tsamp_list = zeros(1,length(EbN0_db));
+nr_errors_pre = zeros(1, length(EbN0_db));   % Pre-phase est error counter
+nr_errors_psamp = zeros(1, length(EbN0_db)); % Perfect sampling error counter
+nr_errors_psamp_pre = zeros(1,length(EbN0_db)); % Perfect pre-phase est error counter
+
 for snr_point = 1:length(EbN0_db)
+  
+  %%% tsamp sum
+  tsamp_sum = 0;
   
   % Loop over several blocks to get sufficient statistics.
   for blk = 1:nr_blocks
@@ -90,7 +107,7 @@ for snr_point = 1:length(EbN0_db)
     t_samp = sync(mf, b_train, Q, t_start, t_end);
     
     %%% PA1 Perfect t_samp:
-%     t_samp = 48;            % 10 / 2 * 8 = 40 guard bits, 40-48 is first 
+    t_psamp = 48;            % 10 / 2 * 8 = 40 guard bits, 40-48 is first 
                             % training bit
     
     
@@ -98,36 +115,69 @@ for snr_point = 1:length(EbN0_db)
     % separated by a factor of Q. Only training+data samples are kept.
     r_pre = mf(t_samp:Q:t_samp+Q*(nr_training_bits+nr_data_bits)/2-1);
 
+    r_psamp_pre = mf(t_psamp:Q:t_psamp+Q*(nr_training_bits+nr_data_bits)/2-1);
+    
     % Phase estimation and correction.
     phihat = phase_estimation(r_pre, b_train);
     r = r_pre * exp(-1i*phihat);
     
-    %%% PA1 Perfect phase: calculate phase from noise?
-    
+    r_psamp = r_psamp_pre * exp(-1i*phihat);      % with or without phase corrrection
     
     % Make decisions. Note that dhat will include training sequence bits
     % as well.
     bhat = detect(r);
     %bhat = differential_detect(r);
+    bhat_pre = detect(r_pre);           % pre-phase correction bhat
+    bhat_psamp = detect(r_psamp);
+    bhat_psamp_pre = detect(r_psamp_pre);
     
+    % Reference points:   
     % Count errors. Note that only the data bits and not the training bits
     % are included in the comparison. The last data bits are missing as well
     % since the whole impulse response due to the last symbol is not
     % included in the simulation program above.
     temp=bhat(1+nr_training_bits:nr_training_bits+nr_data_bits) ~= b_data;
     nr_errors(snr_point) = nr_errors(snr_point) + sum(temp);
+    
+    %%% Pre-phase correction
+    temp_pre = bhat_pre(1+nr_training_bits:nr_training_bits+nr_data_bits) ~= b_data;
+    nr_errors_pre(snr_point) = nr_errors_pre(snr_point) + sum(temp_pre);
+    
+    %%% Perfect sampling
+    temp_psamp = bhat_psamp(1+nr_training_bits:nr_training_bits+nr_data_bits) ~= b_data;
+    nr_errors_psamp(snr_point) = nr_errors_psamp(snr_point) + sum(temp_psamp);
+    
+    %%% Perfect sampling pre-phase correction
+    temp_psamp_pre = bhat_psamp_pre(1+nr_training_bits:nr_training_bits+nr_data_bits) ~= b_data;
+    nr_errors_psamp_pre(snr_point) = nr_errors_psamp_pre(snr_point) + sum(temp_psamp_pre);
+    
+    %%% tsamp averaging
+    tsamp_sum = tsamp_sum + t_samp;
 
     % Next block.
   end
   
-  %%% PA3: Plot signal constellation
-%   two_scatter(r,r_pre, snr_point)
+  %%% tsamp
+  tsamp_list(snr_point) = tsamp_sum / nr_blocks;    % contains the 
+                                                    % different tsamp
+  
+  %%% Plot signal constellation of last block in each noise
+  mf_ref = conv(mf_pulse_shape,tx);
+  tx_ref = mf_ref(t_samp:Q:t_samp+Q*(nr_training_bits+nr_data_bits)/2-1);
+  
+%   two_scatter(r,r_pre, EbN0_db(snr_point), tx_ref)          % plots before and after
+                                                    % phase correction
   
   % Next Eb/No value.
 end
 
 % Compute the BER. 
 BER = nr_errors / nr_data_bits / nr_blocks;
+BER_pre = nr_errors_pre / nr_data_bits / nr_blocks;
+BER_psamp = nr_errors_psamp / nr_data_bits / nr_blocks;
+BER_psamp_pre = nr_errors_psamp_pre / nr_data_bits / nr_blocks;
+
+disp('Done!')
 
 %% PA 1: BER
 %%% BER 
@@ -136,46 +186,74 @@ plot(EbN0_db, BER)
 hold on
 
 %%% Perfect BER: 
-EbN0 = 10.^(EbN0_db/20);        % db conversion
+EbN0 = 10.^(EbN0_db/10);        % db conversion.. made a simple mistake.
 BER_0 = qfunc(sqrt(2*EbN0));    % BER rate of QPSK, M page 128
-BerT = 0.5 * erfc( sqrt(10 .^ (EbN0_db / 10)) );
-plot(EbN0_db, BerT);
+BerT = 0.5 * erfc( sqrt(10 .^ (EbN0_db / 10)) ); % now equal to BER_0
+plot(EbN0_db, BER_0);
 hold off
 
-title('BER')
-axis([-5 20 10^-5 1])
+% title('BER')
+axis([-5 20 10^-5 0.25])
 legend('Simulation', 'Theoretical value')
 xlabel('SNR (dB)')
 ylabel('BER (Pr)')
-%%% Exact Error probability of QPSK: why?
 
-% P = 2*qfunc(sqrt(2*EbN0_db))-(qfunc(sqrt(EbN0_db))).^2;     % M page 118
-% plot(EbN0_db, P)
-% 
-% hold off
 
-% figsaver(1:2,'PA1')
+figsaver(1:2,'PA1')
 
 %% PA 2: Phase and timing sensitivity to noise
 
-%%% Measure phase est error / timing est error
+%%% Performance: Measure phase est error / timing est error
     % What is correct phase est? 
-    
-peek = 4;
-constallation_scatter(tx(peek),3)
+    % What is error in phase est?
+        % COMPARE BER BEFORE AND AFTER PHASE EST! 
+% %%% BER 
+% figure(2)
+% plot(EbN0_db, BER)
+% hold on
+% 
+% %%% BER pre phase estimation
+% plot(EbN0_db, BER_pre)
+% hold off
+
+% assume perfect sample point is t_samp = 48
+%%% BER diff with phase estimation
+figure(1)
+plot(EbN0_db, BER_psamp-BER_psamp_pre)
+    % How much phase estimation contributes to the BER with perfect sync
+    % -> phase compensation becomes redundant
 hold on
-constallation_scatter(rx(peek),3)
+
+
+%%% BER diff between perfect sync and sync
+% figure(2)
+plot(EbN0_db, BER_pre - BER_psamp_pre)
+    % Difference between perfect and achieved sync effects on BER, without
+    % phase compensation
+    % -> perfect sync is achieved
 hold off
+BER_psamp_pre
+% peek = 4;
+% one_scatter(tx(peek),3)
+% hold on
+% one_scatter(rx(peek),3)
+% hold off
     
 %%% What is correct timing?
-    % 48 samples in
+    % 48 samples in with current setup.    
+        % Q: Can other samplepoints be better when noise is introduced?
+    % tsamp_list contains different sampling points chosen
     
 % Plot for different SNR (start with very large)
+% Which is most sensitive?
 % Why?
 % Improved?
 
 %% PA 3: Signal constellations and noise
 
+% Study signal constellation for various SNR
+
+% What are the implications of an error in the phase estimate?
 
 %% PA 4: PSD with different pulses
 
@@ -217,14 +295,18 @@ function one_scatter(data, fig)
 end
 
 
-function two_scatter(tx, rx, snr_point)
-    fignum = snr_point + 5;
-    figure(fignum)
-    scatter(real(tx), imag(tx))
-    hold on
-    scatter(real(rx), imag(rx))
-    hold off
-    title('Recieved signal constallation with SNR = ',  snr_point)
-%     axis([-3 3 -3 3]);
+function two_scatter(d1, d2, snr, ref)
 
+    fignum = snr + 50;
+    figure(fignum)
+    scatter(real(d1), imag(d1))
+    hold on
+    scatter(real(d2), imag(d2)) 
+    if ~isempty(ref)                % Reference points   
+        scatter(real(ref), imag(ref), 'filled')
+    end
+    hold off
+    title('Recieved signal constallation with SNR = ',  snr)
+%     axis([-3 3 -3 3]);
+    
 end
