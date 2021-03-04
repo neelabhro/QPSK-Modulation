@@ -9,7 +9,7 @@ clc;
 close all;
 
 % Initialization
-EbN0_db = 0:10;                     % Eb/N0 values to simulate (in dB)
+EbN0_db = -5:20;                     % Eb/N0 values to simulate (in dB)
 nr_bits_per_symbol = 2;             % Corresponds to k in the report
 nr_guard_bits = 10;                 % Size of guard sequence (in nr bits)
                                     % Guard bits are appended to transmitted bits so
@@ -56,6 +56,7 @@ for snr_point = 1:length(EbN0_db)
     
     % Map bits into complex-valued QPSK symbols.
     d = qpsk(b);
+    %d = differential_qpsk(b);
 
     % Upsample the signal, apply pulse shaping.
     tx = upfirdn(d, pulse_shape, Q, 1);
@@ -99,7 +100,7 @@ for snr_point = 1:length(EbN0_db)
 
     % Phase estimation and correction.
     phihat = phase_estimation(r_pre, b_train);
-    r = r_pre * exp(-j*phihat);
+    r = r_pre * exp(-1i*phihat);
     
     %%% PA1 Perfect phase: calculate phase from noise?
     
@@ -107,6 +108,7 @@ for snr_point = 1:length(EbN0_db)
     % Make decisions. Note that dhat will include training sequence bits
     % as well.
     bhat = detect(r);
+    %bhat = differential_detect(r);
     
     % Count errors. Note that only the data bits and not the training bits
     % are included in the comparison. The last data bits are missing as well
@@ -136,10 +138,12 @@ hold on
 %%% Perfect BER: 
 EbN0 = 10.^(EbN0_db/20);        % db conversion
 BER_0 = qfunc(sqrt(2*EbN0));    % BER rate of QPSK, M page 128
-plot(EbN0_db, BER_0)
+BerT = 0.5 * erfc( sqrt(10 .^ (EbN0_db / 10)) );
+plot(EbN0_db, BerT);
 hold off
 
 title('BER')
+axis([-5 20 10^-5 1])
 legend('Simulation', 'Theoretical value')
 xlabel('SNR (dB)')
 ylabel('BER (Pr)')
