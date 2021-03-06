@@ -2,20 +2,26 @@
 
 %%% Periodogram
 
-Prr_raised = periodogram(r_raised);
-Prr_rect = periodogram(r_rect);
+% Prr_raised = periodogram(r_raised);
+Prr_rect = periodogram(r);
+% Prr_trig = periodogram(r);
+
 % 
 % N = length(r);
 % R = fft(r);
 % Pr = 1/N*abs(R).^2;
 % 
+
+%%
 figure(1)
-plot(1:length(Prr_rect), Prr_raised, 'LineWidth',3)
+plot(1:length(Prr_rect), Prr_trig, 'LineWidth',3)
 hold on
 title('Periodogram with re')
 plot(1:length(Prr_rect), Prr_rect) 
 legend('Raised cosine pulse', 'Rectangular pulse');
 hold off
+
+
 % 
 % % figure(2)
 % % plot(Pr)
@@ -67,13 +73,16 @@ Q = 8;                              % Number of samples per symbol in baseband
 
 %%% Variable
 % Step function
-% pulse_shape = ones(1, Q);
+pulse_shape = ones(1, Q);
 
 % Raised cosine
-pulse_shape = root_raised_cosine(Q);
+% pulse_shape = root_raised_cosine(Q);
 
 % Triangular?
+% pulse_shape = bartlett(Q);
 
+figure(66)
+plot(pulse_shape)
 
 
 % Matched filter impulse response. 
@@ -119,6 +128,9 @@ for snr_point = 1:length(EbN0_db)
 
     % Upsample the signal, apply pulse shaping.
     tx = upfirdn(d, pulse_shape, Q, 1);
+    
+    %%%%%%%%%%%%%% Try to use this?
+%     tx = txfilter(d);
 
     %%%
     %%% AWGN Channel
@@ -216,3 +228,25 @@ BER_psamp = nr_errors_psamp / nr_data_bits / nr_blocks;
 BER_psamp_pre = nr_errors_psamp_pre / nr_data_bits / nr_blocks;
 
 disp('Done!')
+
+
+%%% BER 
+figure(2)
+plot(EbN0_db, BER)
+hold on
+
+%%% Perfect BER: 
+EbN0 = 10.^(EbN0_db/10);        % db conversion.. made a simple mistake.
+BER_0 = qfunc(sqrt(2*EbN0));    % BER rate of QPSK, M page 128
+BerT = 0.5 * erfc( sqrt(10 .^ (EbN0_db / 10)) ); % now equal to BER_0
+plot(EbN0_db, BER_0);
+hold off
+
+% title('BER')
+axis([EbN0_db(1) 20 10^-5 max(max(BER_0,BER))])
+legend('Simulation', 'Theoretical value')
+xlabel('SNR (dB)')
+ylabel('BER (Pr)')
+
+
+% figsaver(1:2,'PA1')

@@ -42,7 +42,7 @@ hold off
 % axis([EbN0_db(1) 20 10^-5 max(max(BER_0,BER))])
 legend('Simulation with SNR 0' ,'Simulation with SNR 2','Simulation with SNR 4', ...
 'Simulation with SNR 6', 'Simulation with SNR 8', 'Simulation with SNR 10')
-xlabel('Sync offset')
+xlabel('Phase offset rad')
 ylabel('BER (Pr)')
 
 
@@ -64,7 +64,7 @@ hold off
 % axis([EbN0_db(1) 20 10^-5 max(max(BER_0,BER))])
 legend('Simulation with SNR 5' ,'Simulation with SNR 6','Simulation with SNR 7', ...
 'Simulation with SNR 8', 'Simulation with SNR 9', 'Simulation with SNR 10')
-xlabel('Sync offset')
+xlabel('Phase offset (rad)')
 ylabel('BER (Pr)')
 
 
@@ -80,13 +80,20 @@ close all;
 
 % Initialization
 
-%%% Sync error
-sync_error = -10:10;
-error = sync_error;
+%%% Sync error NOT USED
+% sync_error = -10:10;
+% error = sync_error;
 
-%%% Phase error NOT USED
-% phase_error = [-10:10] .* (2*pi/10);
-% error = phase_error; 
+%%% Phase error 
+phase_error = [-12:12] .* (pi/10);
+error = phase_error; 
+
+%%% NEEL
+% sq_phase_error = zeros(1, length(EbN0_db));
+% 
+% sq_phase_error(snr_point) = sq_phase_error(snr_point)+abs(phihat)^2;
+% 
+% sq_phase_error = sqrt(sq_phase_error/nr_blocks);
 
 
 %%% Variable
@@ -200,13 +207,13 @@ for snr_point = 1:length(EbN0_db)
         % function used for syncing)! 
         t_start=1+Q*nr_guard_bits/2;
         t_end=t_start+50;
-%         t_samp = sync(mf, b_train, Q, t_start, t_end);
+        t_samp = sync(mf, b_train, Q, t_start, t_end);
     
         %%% PA1 Perfect t_samp:
         t_psamp = 48;            % 10 / 2 * 8 = 40 guard bits, 40-48 is first 
                                 % training bit
         %%% PA4 Sync error
-        t_samp = t_psamp + sync_error(err_point);
+%         t_samp = t_psamp + sync_error(err_point);
 
 
         % Down sampling. t_samp is the first sample, the remaining samples are all
@@ -216,9 +223,9 @@ for snr_point = 1:length(EbN0_db)
         r_psamp_pre = mf(t_psamp:Q:t_psamp+Q*(nr_training_bits+nr_data_bits)/2-1);
 
         % Phase estimation and correction.
-        phihat = phase_estimation(r_pre, b_train);
-
-        r = r_pre * exp(-1i*phihat);
+%         phihat = phase_estimation(r_pre, b_train);
+%         r = r_pre * exp(-1i*phihat);
+        r = r_pre * exp(-1i*phase_error(err_point));
 
         r_psamp = r_psamp_pre * exp(-1i*phihat);      % with or without phase corrrection
 
