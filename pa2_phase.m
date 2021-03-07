@@ -1,100 +1,23 @@
 %% PA 2: Phase and timing sensitivity to noise
 
-%%% Performance: Measure phase est error / timing est error
-    % What is correct phase est? 
-    % What is error in phase est?
-        % COMPARE BER BEFORE AND AFTER PHASE EST! 
-    
-%%% What is correct timing?
-    % 48 samples in with current setup.    
-        % Q: Can other samplepoints be better when noise is introduced?
-    % tsamp_list contains different sampling points chosen
-
-    
-% Plot for different SNR (start with very large)
-% Which is most sensitive?
-% Why?
-% Improved?
-
-%%% TODO: 
-% Fix SNR, plot different sample points and different phase errors.
-
-% Gradually change synch and plot BER over time
-
-
-
-% 
-%%% BER 
-figure(99)
-for i = 1:length(EbN0_db)
-    plot(error, BER(:,i))
-    hold on
-end
-hold off
-%%% Perfect BER: 
-% EbN0 = 10.^(EbN0_db/10);        % db conversion.. made a simple mistake.
-% BER_0 = qfunc(sqrt(2*EbN0));    % BER rate of QPSK, M page 128
-% BerT = 0.5 * erfc( sqrt(10 .^ (EbN0_db / 10)) ); % now equal to BER_0
-% plot(EbN0_db, BER_0);
-% hold off
-
-% title('BER')
-% axis([EbN0_db(1) 20 10^-5 max(max(BER_0,BER))])
-legend('Simulation with SNR 0' ,'Simulation with SNR 2','Simulation with SNR 4', ...
-'Simulation with SNR 6', 'Simulation with SNR 8', 'Simulation with SNR 10')
-xlabel('Phase offset rad')
-ylabel('BER (Pr)')
-
-
-%%% Other plot if you want it
-figure(100)
-for i = 1:length(EbN0_db)
-    plot(error, BER_psamp_pre(:,i))
-    hold on
-end
-hold off
-%%% Perfect BER: 
-% EbN0 = 10.^(EbN0_db/10);        % db conversion.. made a simple mistake.
-% BER_0 = qfunc(sqrt(2*EbN0));    % BER rate of QPSK, M page 128
-% BerT = 0.5 * erfc( sqrt(10 .^ (EbN0_db / 10)) ); % now equal to BER_0
-% plot(EbN0_db, BER_0);
-% hold off
-
-% title('BER')
-% axis([EbN0_db(1) 20 10^-5 max(max(BER_0,BER))])
-legend('Simulation with SNR 5' ,'Simulation with SNR 6','Simulation with SNR 7', ...
-'Simulation with SNR 8', 'Simulation with SNR 9', 'Simulation with SNR 10')
-xlabel('Phase offset (rad)')
-ylabel('BER (Pr)')
-
-
+% Can be run from top
+% Unique code is found below simulation
 
 %% Simulation 
 
 %%%%%
-%%%%% MODIFIED TO LOOP OVER PHASE OR SYNC ERRORS
+%%%%% MODIFIED TO LOOP OVER PHASE ERRORS
 %%%%%
 
 clc;
-close all;
+clear all
+close all
 
 % Initialization
 
-%%% Sync error NOT USED
-% sync_error = -10:10;
-% error = sync_error;
-
 %%% Phase error 
-phase_error = [-12:12] .* (pi/10);
+phase_error = [0:6] .* (pi/10);
 error = phase_error; 
-
-%%% NEEL
-% sq_phase_error = zeros(1, length(EbN0_db));
-% 
-% sq_phase_error(snr_point) = sq_phase_error(snr_point)+abs(phihat)^2;
-% 
-% sq_phase_error = sqrt(sq_phase_error/nr_blocks);
-
 
 %%% Variable
 EbN0_db = 0:2:10;                     % Eb/N0 values to simulate (in dB)
@@ -122,9 +45,6 @@ pulse_shape = ones(1, Q);
 % Raised cosine
 % pulse_shape = root_raised_cosine(Q);
 
-% Triangular?
-
-
 
 % Matched filter impulse response. 
 mf_pulse_shape = fliplr(pulse_shape);
@@ -136,7 +56,9 @@ BER_pre = zeros(length(error),length(EbN0_db));
 BER_psamp = zeros(length(error),length(EbN0_db));
 BER_psamp_pre = zeros(length(error),length(EbN0_db));
 
+
 for snr_point = 1:length(EbN0_db)
+    
     % Loop over different values of Eb/No.
     nr_errors = zeros(1, length(error));   % Error counter
 
@@ -145,10 +67,6 @@ for snr_point = 1:length(EbN0_db)
     nr_errors_pre = zeros(  1, length(error));   % Pre-phase est error counter
     nr_errors_psamp = zeros(1, length(error)); % Perfect sampling error counter
     nr_errors_psamp_pre = zeros(1,length(error)); % Perfect pre-phase est error counter
-
-    
-    % Neel phase code
-    sq_phase_error = zeros(1, length(EbN0_db));
     
     for err_point = 1:length(error)
 
@@ -223,8 +141,10 @@ for snr_point = 1:length(EbN0_db)
         r_psamp_pre = mf(t_psamp:Q:t_psamp+Q*(nr_training_bits+nr_data_bits)/2-1);
 
         % Phase estimation and correction.
-%         phihat = phase_estimation(r_pre, b_train);
+        phihat = phase_estimation(r_pre, b_train);
 %         r = r_pre * exp(-1i*phihat);
+
+        %%% Receieved with phase error!
         r = r_pre * exp(-1i*phase_error(err_point));
 
         r_psamp = r_psamp_pre * exp(-1i*phihat);      % with or without phase corrrection
@@ -268,7 +188,6 @@ for snr_point = 1:length(EbN0_db)
                                                         % different tsamp
 
 
-    %   two_scatter(0, r, EbN0_db(snr_point), 0)
       % Next Eb/No value.
     end
 
@@ -279,8 +198,23 @@ for snr_point = 1:length(EbN0_db)
     BER_psamp(:,snr_point) = nr_errors_psamp / nr_data_bits / nr_blocks;
     BER_psamp_pre(:,snr_point) = nr_errors_psamp_pre / nr_data_bits / nr_blocks;
     
-    BER
     disp('Done!')
 
 end
 
+
+%% Plots
+%%% BER 
+figure(99)
+for i = 1:length(EbN0_db)-1
+    plot(error, BER(:,i))
+    hold on
+end
+hold off
+% title('BER')
+% axis([EbN0_db(1) 20 10^-5 max(max(BER_0,BER))])
+legend('Simulation with SNR 0' ,'Simulation with SNR 2','Simulation with SNR 4', ...
+'Simulation with SNR 6', 'Simulation with SNR 8', 'Simulation with SNR 10')
+xlabel('Phase offset (rad)')
+ylabel('BER (Pr)')
+set(gca, 'YScale', 'log')

@@ -1,11 +1,7 @@
 %% PA 3: Signal constellations and noise
 
-% Study signal constellation for various SNR
-
-% What are the implications of an error in the phase estimate?
-
-%%%%%% DONE
-
+% Can be run from top
+% Plots performed in Simulation code on chosen SNR.
 
 %% Simulation
 % Skeleton code for simulation chain
@@ -15,12 +11,13 @@
 %   2001-10-22  modified /George Jongren
 
 clc;
-close all;
+clear all
+close all
 
 % Initialization
 
 %%% Variable
-EbN0_db = -20:10;                     % Eb/N0 values to simulate (in dB)
+EbN0_db = [-5, 0, 5, 10];                     % Eb/N0 values to simulate (in dB)
 
 %%% Static
 nr_bits_per_symbol = 2;             % Corresponds to k in the report
@@ -40,13 +37,10 @@ Q = 8;                              % Number of samples per symbol in baseband
 
 %%% Variable
 % Step function
-% pulse_shape = ones(1, Q);
+pulse_shape = ones(1, Q);
 
 % Raised cosine
-pulse_shape = root_raised_cosine(Q);
-
-% Triangular?
-
+% pulse_shape = root_raised_cosine(Q);
 
 
 % Matched filter impulse response. 
@@ -177,8 +171,13 @@ for snr_point = 1:length(EbN0_db)
   tsamp_list(snr_point) = tsamp_sum / nr_blocks;    % contains the 
                                                     % different tsamp
   
+  %%% Plots recieved signal after estimations                                       
+  i = abs(EbN0_db(1)) + EbN0_db(snr_point) + 1;
+  figure(i)
+  scatter(real(r), imag(r))
+  yline(0)
+  xline(0)
   
-%   two_scatter(0, r, EbN0_db(snr_point), 0)
   % Next Eb/No value.
 end
 

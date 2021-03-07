@@ -1,54 +1,50 @@
 %% PA 4: PSD with different pulses
 
-%%% Periodogram
+%%% CANNOT BE RUN FROM THE TOP
 
-% Prr_raised = periodogram(r_raised);
-Prr_rect = periodogram(r);
-% Prr_trig = periodogram(r);
 
-% 
-% N = length(r);
-% R = fft(r);
-% Pr = 1/N*abs(R).^2;
-% 
+%%% Final plot
+% x axis frequency vector
+f = -length(Prr_rect)/2+1:1:length(Prr_rect)/2;
 
-%%
 figure(1)
-plot(1:length(Prr_rect), Prr_trig, 'LineWidth',3)
 hold on
-title('Periodogram with re')
-plot(1:length(Prr_rect), Prr_rect) 
-legend('Raised cosine pulse', 'Rectangular pulse');
+plot(f, Prr_rect) 
+plot(f, Prr_raised) 
+plot(f, Prr_trig)
+legend('Rectangular pulse', 'Raised Cosine pulse', 'Triangular pulse');
 hold off
+set(gca, 'YScale', 'log')
+
+%% Save & compute Periodogram from different pulses
+
+% Run Simulation with different pulses, then save them manually here
+% afterwards.
+
+w = window(@blackman, length(rx));
+
+Prr_raised = periodogram(tx,w, 'centered');
+disp('Raised saved!')
+
+% Prr_rect = periodogram(tx,w, 'centered');
+% disp('Rect saved!')
+
+% Prr_trig = periodogram(tx,w, 'centered');
+% disp('Trig saved!')
+
+figure(3)
+% plot(Prr_rect)
+plot(Prr_raised) 
+% plot(Prr_trig)
+set(gca, 'YScale', 'log')
 
 
-% 
-% % figure(2)
-% % plot(Pr)
-% % title('Periodogram')
-% 
-% figsaver(1,'PA4')
-
-% %%% Spectrogram:
-% r_raised = r;
-% % s = spectrogram(r);
-% figure(1)
-% spectrogram(r_rect,'yaxis')
-% 
-% figure(2)
-% spectrogram(r_raised,'yaxis')
-
-
-% plot(abs(s))
-
-%% Simulation
+%% Simulation 
 % Skeleton code for simulation chain
 
-% History:
-%   2000-06-28  written /Stefan Parkvall
-%   2001-10-22  modified /George Jongren
-
-clc;
+%%%%%
+%%%%% MODIFIED END OF SYNC AND PULSES
+%%%%%
 
 % Initialization
 
@@ -73,10 +69,10 @@ Q = 8;                              % Number of samples per symbol in baseband
 
 %%% Variable
 % Step function
-pulse_shape = ones(1, Q);
+% pulse_shape = ones(1, Q);
 
 % Raised cosine
-% pulse_shape = root_raised_cosine(Q);
+pulse_shape = root_raised_cosine(Q).*(1/max(root_raised_cosine(Q)));
 
 % Triangular?
 % pulse_shape = bartlett(Q);
@@ -157,7 +153,7 @@ for snr_point = 1:length(EbN0_db)
     % parameters. Use sensible values (hint: plot the correlation
     % function used for syncing)! 
     t_start=1+Q*nr_guard_bits/2;
-    t_end=t_start+50;
+    t_end=t_start+100;  %%%%%%%%%%%%%%%%%%%%%%% SMART CHOICE
     t_samp = sync(mf, b_train, Q, t_start, t_end);
 %     t_samp = 48;
     %%% PA1 Perfect t_samp:
@@ -217,7 +213,6 @@ for snr_point = 1:length(EbN0_db)
                                                     % different tsamp
   
   
-%   two_scatter(0, r, EbN0_db(snr_point), 0)
   % Next Eb/No value.
 end
 
@@ -247,6 +242,7 @@ axis([EbN0_db(1) 20 10^-5 max(max(BER_0,BER))])
 legend('Simulation', 'Theoretical value')
 xlabel('SNR (dB)')
 ylabel('BER (Pr)')
+% set(gca, 'YScale', 'log')
 
 
 % figsaver(1:2,'PA1')

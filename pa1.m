@@ -1,24 +1,7 @@
 %% PA 1: BER
-%%% BER 
-figure(2)
-plot(EbN0_db, BER)
-hold on
 
-%%% Perfect BER: 
-EbN0 = 10.^(EbN0_db/10);        % db conversion.. made a simple mistake.
-BER_0 = qfunc(sqrt(2*EbN0));    % BER rate of QPSK, M page 128
-BerT = 0.5 * erfc( sqrt(10 .^ (EbN0_db / 10)) ); % now equal to BER_0
-plot(EbN0_db, BER_0);
-hold off
-
-% title('BER')
-axis([EbN0_db(1) 20 10^-5 max(max(BER_0,BER))])
-legend('Simulation', 'Theoretical value')
-xlabel('SNR (dB)')
-ylabel('BER (Pr)')
-
-
-% figsaver(1:2,'PA1')
+% Can be run from top
+% Unique code is found below simulation
 
 %% Simulation
 % Skeleton code for simulation chain
@@ -28,7 +11,8 @@ ylabel('BER (Pr)')
 %   2001-10-22  modified /George Jongren
 
 clc;
-close all;
+clear all
+close all
 
 % Initialization
 
@@ -53,14 +37,10 @@ Q = 8;                              % Number of samples per symbol in baseband
 
 %%% Variable
 % Step function
-% pulse_shape = ones(1, Q);
+pulse_shape = ones(1, Q);
 
 % Raised cosine
-pulse_shape = root_raised_cosine(Q);
-
-% Triangular?
-
-
+% pulse_shape = root_raised_cosine(Q);
 
 % Matched filter impulse response. 
 mf_pulse_shape = fliplr(pulse_shape);
@@ -88,7 +68,7 @@ for snr_point = 1:length(EbN0_db)
     %%%
 
     % Generate training sequence.
-    b_train = training_sequence(nr_training_bits);
+    b_train = mod_training_sequence(nr_training_bits);
     
     % Generate random source data {0, 1}.
     b_data = random_data(nr_data_bits);
@@ -134,6 +114,7 @@ for snr_point = 1:length(EbN0_db)
     t_end=t_start+50;
     t_samp = sync(mf, b_train, Q, t_start, t_end);
 %     t_samp = 48;
+
     %%% PA1 Perfect t_samp:
     t_psamp = 48;            % 10 / 2 * 8 = 40 guard bits, 40-48 is first 
                             % training bit
@@ -171,7 +152,8 @@ for snr_point = 1:length(EbN0_db)
     %%% Pre-phase correction
     temp_pre = bhat_pre(1+nr_training_bits:nr_training_bits+nr_data_bits) ~= b_data;
     nr_errors_pre(snr_point) = nr_errors_pre(snr_point) + sum(temp_pre);
-    
+    %%% BER 
+
     %%% Perfect sampling
     temp_psamp = bhat_psamp(1+nr_training_bits:nr_training_bits+nr_data_bits) ~= b_data;
     nr_errors_psamp(snr_point) = nr_errors_psamp(snr_point) + sum(temp_psamp);
@@ -202,3 +184,27 @@ BER_psamp = nr_errors_psamp / nr_data_bits / nr_blocks;
 BER_psamp_pre = nr_errors_psamp_pre / nr_data_bits / nr_blocks;
 
 disp('Done!')
+
+
+%% Plots
+
+%%% BER 
+figure(3)
+plot(EbN0_db, BER)
+hold on
+
+%%% Perfect BER: 
+EbN0 = 10.^(EbN0_db/10);        % db conversion.. made a simple mistake.
+BER_0 = qfunc(sqrt(2*EbN0));    % BER rate of QPSK, M page 128
+BerT = 0.5 * erfc( sqrt(10 .^ (EbN0_db / 10)) ); % now equal to BER_0
+plot(EbN0_db, BER_0);
+hold off
+
+% title('BER')
+axis([EbN0_db(1) 20 10^-5 max(max(BER_0,BER))])
+legend('Simulation', 'Theoretical value')
+xlabel('SNR (dB)')
+ylabel('BER (Pr)')
+
+
+% figsaver(1:2,'PA1')
